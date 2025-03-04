@@ -1,0 +1,257 @@
+/* ===== Base Styles ===== */
+body {
+    margin: 0;
+    background: #171717;
+    color: #f0f0f0;
+    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    line-height: 1.6;
+    height: 100vh;
+    overflow: hidden;
+}
+
+/* ===== Floating Menu Button ===== */
+.menu-button {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    background: #2d2d2d;
+    border: none;
+    border-radius: 50%;
+    width: 40px;
+    height: 40px;
+    cursor: pointer;
+    color: #4CAF50;
+    z-index: 1000;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+}
+
+/* ===== Tools Panel ===== */
+.tools-panel {
+    position: fixed;
+    top: 0;
+    right: -300px;
+    width: 280px;
+    height: 100vh;
+    background: #252525;
+    transition: right 0.3s ease;
+    z-index: 999;
+    box-shadow: -4px 0 12px rgba(0,0,0,0.2);
+}
+
+.tools-panel.active {
+    right: 0;
+}
+
+.panel-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 16px;
+    border-bottom: 1px solid #333;
+}
+
+.tool-button {
+    width: 100%;
+    padding: 12px;
+    margin: 8px 0;
+    background: #333;
+    border: none;
+    border-radius: 8px;
+    color: #e0e0e0;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+/* ===== Chat Container ===== */
+.chat-container {
+    max-width: 800px;
+    margin: 0 auto;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+}
+
+.chat-messages {
+    flex: 1;
+    padding: 20px;
+    overflow-y: auto;
+    padding-top: 80px;
+    font-size: 16px;
+}
+
+/* ===== Input Area (DeepSeek Style) ===== */
+.chat-input-wrapper {
+    padding: 0 20px 20px 20px;
+    background: #171717; /* Match page background */
+}
+
+.chat-input {
+    display: flex;
+    gap: 10px;
+    background: transparent !important;
+    border: none !important;
+    padding: 0 !important;
+}
+
+input[type="text"] {
+    flex: 1;
+    background: #252525 !important; /* Subtle dark field */
+    border: none !important;
+    border-radius: 8px !important;
+    color: #f0f0f0;
+    font-size: 15px;
+    padding: 12px 16px !important;
+    margin: 0;
+}
+
+input[type="text"]::placeholder {
+    color: #7a7a7a;
+}
+
+input[type="text"]:focus {
+    outline: 2px solid #4CAF50 !important;
+}
+
+/* ===== Send Button ===== */
+button {
+    background: #4CAF50 !important;
+    border: none !important;
+    border-radius: 8px !important;
+    color: white !important;
+    padding: 12px 20px !important;
+    cursor: pointer;
+    transition: transform 0.2s ease;
+}
+
+button:hover {
+    background: #66BB6A !important;
+    transform: scale(1.02);
+}
+
+button:active {
+    transform: scale(0.98);
+}
+
+/* ===== Voice Circle ===== */
+.voice-circle {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 120px;
+    height: 120px;
+    background: #A5FF00;
+    border-radius: 50%;
+    opacity: 0.3;
+    animation: pulse-glow 2s infinite;
+    z-index: 999;
+    box-shadow: 0 0 30px 10px rgba(165, 255, 0, 0.3);
+}
+
+@keyframes pulse-glow {
+    0% {
+        transform: translate(-50%, -50%) scale(0.95);
+        box-shadow: 0 0 20px 5px rgba(165, 255, 0, 0.3);
+    }
+    50% {
+        transform: translate(-50%, -50%) scale(1.1);
+        box-shadow: 0 0 40px 15px rgba(165, 255, 0, 0.4);
+    }
+    100% {
+        transform: translate(-50%, -50%) scale(0.95);
+        box-shadow: 0 0 20px 5px rgba(165, 255, 0, 0.3);
+    }
+}
+
+/* ===== Messages ===== */
+.user-message {
+    background: #2d2d2d;
+    padding: 12px;
+    border-radius: 8px;
+    margin: 8px 0;
+    max-width: 80%;
+    margin-left: auto;
+}
+
+.ai-message {
+    background: #333;
+    padding: 12px;
+    border-radius: 8px;
+    margin: 8px 0;
+    max-width: 80%;
+    margin-right: auto;
+}
+
+/* ===== Code Blocks ===== */
+pre code {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 14px;
+    line-height: 1.5;
+    color: #d4d4d4;
+    display: block !important;
+    padding: 12px !important;
+    border-radius: 8px !important;
+    background: #1e1e1e !important;
+}
+
+
+
+/* Coral AI Name Badge */
+.ai-name {
+    color: #4CAF50;
+    font-size: 0.8em;
+    font-weight: bold;
+    margin-bottom: 4px;
+}
+
+/* Optional: Add Coral AI header */
+.chat-header h1 {
+    color: #4CAF50;
+}
+
+
+/* Add these to your existing CSS */
+/* ===== New Features ===== */
+.loading-dots {
+    color: #4CAF50;
+    font-size: 2em;
+    text-align: center;
+    margin: 20px 0;
+    animation: pulse-opacity 1.5s infinite;
+}
+
+.copy-button {
+    position: absolute;
+    right: 8px;
+    top: 8px;
+    background: #4CAF50;
+    border: none;
+    border-radius: 4px;
+    color: white;
+    cursor: pointer;
+    padding: 4px 8px;
+    z-index: 2;
+}
+
+#codeEditor {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    width: 600px;
+    background: #1e1e1e;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+    z-index: 1000;
+}
+
+#codeEditor.hidden {
+    display: none;
+}
+
+@keyframes pulse-opacity {
+    0% { opacity: 0.4; }
+    50% { opacity: 1; }
+    100% { opacity: 0.4; }
+}

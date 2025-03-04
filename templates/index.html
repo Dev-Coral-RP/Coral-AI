@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Coral AI</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}?v=2.1">
+    <!-- Icons & Fonts -->
+    <script src="https://unpkg.com/feather-icons"></script>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <!-- Highlight.js -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/vs2015.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+    <!-- Monaco Editor -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.36.1/min/vs/loader.min.js"></script>
+    <!-- DOMPurify -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.0.5/purify.min.js"></script>
+</head>
+<body>
+    <div class="container">
+        <!-- Floating Action Button -->
+        <button id="menuButton" class="menu-button">
+            <i data-feather="terminal"></i>
+        </button>
+
+        <!-- Tools Panel -->
+        <div id="toolsPanel" class="tools-panel">
+            <div class="panel-header">
+                <h3>Tools</h3>
+                <button onclick="togglePanel()"><i data-feather="x"></i></button>
+            </div>
+            <div class="panel-content">
+                <button class="tool-button" onclick="toggleEditor()">
+                    <i data-feather="code"></i> Editor
+                </button>
+                <button class="tool-button" id="voiceButton">
+                    <i data-feather="mic"></i> Voice
+                </button>
+                <input type="file" id="codeUpload" hidden accept=".py,.js,.html,.txt">
+                <button class="tool-button" onclick="document.getElementById('codeUpload').click()">
+                    <i data-feather="upload"></i> Upload
+                </button>
+            </div>
+        </div>
+
+        <!-- Code Editor -->
+        <div id="codeEditor" class="hidden">
+            <div id="monacoEditor" style="height: 400px;"></div>
+        </div>
+
+        <!-- Chat Interface -->
+        <div class="chat-container">
+            <div class="chat-header">
+                <h1>Coral AI</h1>
+                <button id="themeToggle">🌙</button>
+            </div>
+            <div class="chat-messages" id="messages"></div>
+            
+            <!-- Input Area -->
+            <div class="chat-input-wrapper">
+                <div id="voiceCircle" class="voice-circle"></div>
+                <div class="chat-input">
+                    <input type="text" id="userInput" placeholder="Ask Coral AI to code...">
+                    <button id="sendButton"><i data-feather="send"></i></button>
+                </div>
+            </div>
+            <button class="tool-button" id="voiceButton">
+                <i data-feather="mic"></i> Voice
+            </button>
+        </div>
+    </div>
+
+    <script>
+       // Initialize core features
+let editorInitialized = false;
+let recognition;
+let conversationHistory = [];
+
+// ====== Voice Recognition ======//
+function initVoiceRecognition() {
+    if ('webkitSpeechRecognition' in window) {
+        recognition = new webkitSpeechRecognition();
+        recognition.continuous = false;
+        recognition.interimResults = false;
+
+        recognition.onresult = (e) => {
+            document.getElementById('userInput').value = e.results[0][0].transcript;
+            updateVoiceCircleVisibility();
+        };
+
+        recognition.onerror = (e) => {
+            console.error('Voice recognition error:', e.error);
+        };
+
+        document.getElementById('voiceButton').addEventListener('click', () => {
+            recognition.start();
+            document.getElementById('voiceCircle').style.display = 'block';
+        });
+    } else {
+        console.warn("Speech recognition not supported");
+        document.getElementById('voiceButton').style.display = 'none';
+    }
+}
+
+// ====== Initialize App ======//
+document.addEventListener('DOMContentLoaded', () => {
+    feather.replace();
+    hljs.highlightAll();
+    initMonacoEditor();
+    initVoiceRecognition();  // Now properly defined
+    
+    // Event listeners
+    document.getElementById('sendButton').addEventListener('click', sendMessage);
+    document.getElementById('userInput').addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') sendMessage();
+    });
+    updateVoiceCircleVisibility();
+});
+
+//====== Core Functions ======//
+async function sendMessage() {
+    const userInput = document.getElementById('userInput');
+    const prompt = userInput.value.trim();
+    if (!prompt) return;
+
+    appendMessage(prompt, true);
+    userInput.value = '';
+    updateVoiceCircleVisibility();
+
+    try {
+        const response = await fetch('/ask', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ 
+                prompt: prompt,
+                history: conversationHistory 
+            })
+        });
+
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.response || `HTTP error! Status: ${response.status}`);
+        }
+
+        const data = await response.json();
+        appendMessage(data.response, false);
+        conversationHistory.push(
+            { role: 'user', content: prompt },
+            { role: 'assistant', content: data.response }
+        );
+    } catch (error) {
+        console.error('API Error:', error);
+        appendMessage(`Coral AI Error: ${error.message}`, false);
+    }
+}
+
+// ====== UI Functions ======//
+function updateVoiceCircleVisibility() {
+    const hasText = document.getElementById('userInput').value.trim().length > 0;
+    document.getElementById('voiceCircle').style.display = hasText ? 'none' : 'block';
+}
+
+function appendMessage(text, isUser) {
+    const messagesDiv = document.getElementById('messages');
+    const messageDiv = document.createElement('div');
+    messageDiv.className = isUser ? 'user-message' : 'ai-message';
+    
+    const sanitizedText = DOMPurify.sanitize(text);
+    
+    if (!isUser) {
+        messageDiv.innerHTML = `
+            <div class="ai-name">Coral AI</div>
+            ${sanitizedText.replace(/```(\w+)?\n([\s\S]*?)```/gs, '<pre><code class="$1">$2</code></pre>')}
+        `;
+        addCopyButtons();
+    } else {
+        messageDiv.textContent = sanitizedText;
+    }
+    
+    messagesDiv.appendChild(messageDiv);
+    feather.replace();
+    hljs.highlightAll();
+    messagesDiv.scrollTop = messagesDiv.scrollHeight;
+}
+
+//====== Feature Implementations ======//
+function addCopyButtons() {
+    document.querySelectorAll('pre code').forEach(block => {
+        if (block.parentElement.querySelector('.copy-button')) return;
+
+        const button = document.createElement('button');
+        button.className = 'copy-button';
+        button.innerHTML = '<i data-feather="copy"></i>';
+        button.onclick = () => {
+            navigator.clipboard.writeText(block.textContent);
+            button.innerHTML = '<i data-feather="check"></i>';
+            setTimeout(() => {
+                button.innerHTML = '<i data-feather="copy"></i>';
+                feather.replace();
+            }, 2000);
+        };
+        block.parentElement.style.position = 'relative';
+        block.parentElement.appendChild(button);
+    });
+    feather.replace();
+}
+
+function initMonacoEditor() {
+    if (editorInitialized || typeof monaco === 'undefined') return;
+    
+    require.config({ 
+        paths: { vs: 'https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.36.1/min/vs' },
+        waitSeconds: 30
+    });
+    
+    require(['vs/editor/editor.main'], () => {
+        window.editor = monaco.editor.create(document.getElementById('monacoEditor'), {
+            value: '// Start coding here...\n',
+            language: 'python',
+            theme: 'vs-dark',
+            minimap: { enabled: false },
+            automaticLayout: true
+        });
+        editorInitialized = true;
+    });
+}
+
+//====== Theme Toggle ======//
+document.getElementById('themeToggle').addEventListener('click', function() {
+    const isDark = document.body.classList.toggle('dark-mode');
+    document.querySelector('.container').classList.toggle('dark');
+    this.textContent = isDark ? '☀️' : '🌙';
+});
+</script>
+</body>
+</html>
