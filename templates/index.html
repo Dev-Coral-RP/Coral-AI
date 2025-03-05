@@ -3,6 +3,7 @@
 <head>
     <title>Coral AI</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}?v=2.1">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.0.5/purify.min.js"></script>
     <!-- Icons & Fonts -->
     <script src="https://unpkg.com/feather-icons"></script>
     <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
@@ -12,7 +13,7 @@
     <!-- Monaco Editor -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.36.1/min/vs/loader.min.js"></script>
     <!-- DOMPurify -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.0.5/purify.min.js"></script>
+    
 </head>
 <body>
     <div class="container">
@@ -31,9 +32,7 @@
                 <button class="tool-button" onclick="toggleEditor()">
                     <i data-feather="code"></i> Editor
                 </button>
-                <button class="tool-button" id="voiceButton">
-                    <i data-feather="mic"></i> Voice
-                </button>
+                <button id="voiceButton" class="voice-button">🎤</button>
                 <input type="file" id="codeUpload" hidden accept=".py,.js,.html,.txt">
                 <button class="tool-button" onclick="document.getElementById('codeUpload').click()">
                     <i data-feather="upload"></i> Upload
@@ -62,9 +61,6 @@
                     <button id="sendButton"><i data-feather="send"></i></button>
                 </div>
             </div>
-            <button class="tool-button" id="voiceButton">
-                <i data-feather="mic"></i> Voice
-            </button>
         </div>
     </div>
 
@@ -92,33 +88,47 @@
     
         //====== Core Functions ======//
         async function sendMessage() {
-            const userInput = document.getElementById('userInput');
-            const prompt = userInput.value.trim();
-            if (!prompt) return;
+    const userInput = document.getElementById('userInput');
+    const prompt = userInput.value.trim();
+    if (!prompt) return;
+
+    // Clear input and hide voice circle immediately
+    userInput.value = '';
+    document.getElementById('voiceCircle').style.opacity = '0';
     
-            userInput.value = '';
-            updateVoiceCircleVisibility();
-    
-            try {
-                const response = await fetch('/ask', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ prompt })
-                });
-    
-                if (!response.ok) {
-                    const errorData = await response.json();
-                    throw new Error(errorData.response || `HTTP error: ${response.status}`);
-                }
-    
-                const data = await response.json();
-                appendMessage(data.response, false);
-                
-            } catch (error) {
-                console.error('API Error:', error);
-                appendMessage(`Coral AI Error: ${error.message}`, false);
-            }
-        }
+    try {
+        // Show temporary loading state
+        const tempDiv = document.createElement('div');
+        tempDiv.className = 'message-bubble ai-bubble loading';
+        tempDiv.innerHTML = '<div class="ai-name">Coral AI</div>● ● ●';
+        document.getElementById('messages').appendChild(tempDiv);
+
+        const response = await fetch('/ask', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ prompt })
+        });
+
+        // Remove loading state
+        tempDiv.remove();
+
+        if (!response.ok) throw new Error('API request failed');
+        
+        const data = await response.json();
+        appendMessage(data.response, false);
+        
+    } catch (error) {
+        console.error('Error:', error);
+        appendMessage(`Error: ${error.message}`, false);
+    } finally {
+        // Ensure voice circle stays hidden
+        document.getElementById('voiceCircle').style.opacity = '0';
+    }
+
+    console.log('Before appendMessage');
+appendMessage(prompt, true);
+console.log('After appendMessage');
+}
     
         //====== Voice Features ======//
         function initVoiceRecognition() {
@@ -144,29 +154,89 @@
             document.getElementById('voiceCircle').style.display = hasText ? 'none' : 'block';
         }
     
+
+        async function sendMessage() {
+    const userInput = document.getElementById('userInput');
+    const prompt = userInput.value.trim();
+    if (!prompt) return;
+
+    // Append the user's message immediately
+    appendMessage(prompt, true);
+
+    // Clear input and hide voice circle immediately
+    userInput.value = '';
+    document.getElementById('voiceCircle').style.opacity = '0';
+
+    // Show temporary loading state for AI response
+    const tempDiv = document.createElement('div');
+    tempDiv.className = 'message-bubble ai-bubble loading';
+    tempDiv.innerHTML = '<div class="ai-name">Coral AI</div>● ● ●';
+    document.getElementById('messages').appendChild(tempDiv);
+
+    try {
+        const response = await fetch('/ask', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ prompt })
+        });
+
+        // Remove loading state
+        tempDiv.remove();
+
+        if (!response.ok) throw new Error('API request failed');
+        
+        const data = await response.json();
+        appendMessage(data.response, false);
+        
+    } catch (error) {
+        console.error('Error:', error);
+        appendMessage(`Error: ${error.message}`, false);
+    } finally {
+        // Ensure voice circle stays hidden
+        document.getElementById('voiceCircle').style.opacity = '0';
+    }
+}
+
+
         //====== Message Handling ======//
         function appendMessage(text, isUser) {
-            const messagesDiv = document.getElementById('messages');
-            const messageDiv = document.createElement('div');
-            messageDiv.className = isUser ? 'user-message' : 'ai-message';
-            
-            const sanitizedText = DOMPurify.sanitize(text);
-            
-            if (!isUser) {
-                messageDiv.innerHTML = `
-                    <div class="ai-name">Coral AI</div>
-                    ${sanitizedText.replace(/```(\w+)?\n([\s\S]*?)```/gs, '<pre><code class="$1">$2</code></pre>')}
-                `;
-                addCopyButtons();
-            } else {
-                messageDiv.textContent = sanitizedText;
-            }
-            
-            messagesDiv.appendChild(messageDiv);
-            feather.replace();
-            hljs.highlightAll();
-            messagesDiv.scrollTop = messagesDiv.scrollHeight;
-        }
+    const messagesDiv = document.getElementById('messages');
+    
+    // Create message container
+    const messageDiv = document.createElement('div');
+    messageDiv.className = isUser ? 'user-message' : 'ai-message';
+    messageDiv.style.opacity = '1'; // Force visibility
+    
+    // Create content wrapper
+    const contentDiv = document.createElement('div');
+    contentDiv.className = 'message-content';
+    
+    // Sanitize and populate
+    const sanitizedText = DOMPurify.sanitize(text);
+    
+    if (isUser) {
+        contentDiv.textContent = sanitizedText;
+        contentDiv.style.backgroundColor = '#4CAF50'; // Force green background
+    } else {
+        contentDiv.innerHTML = `
+            <div class="ai-name">Coral AI</div>
+            ${sanitizedText.replace(/```(\w+)?\n([\s\S]*?)```/gs, '<pre><code class="$1">$2</code></pre>')}
+        `;
+        addCopyButtons();
+    }
+    
+    messageDiv.appendChild(contentDiv);
+    messagesDiv.appendChild(messageDiv);
+    
+    // Scroll to bottom
+    messagesDiv.scrollTo({
+        top: messagesDiv.scrollHeight,
+        behavior: 'smooth'
+    });
+    
+    // Debug log
+    console.log('Message appended:', messageDiv);
+}
     
         //====== Editor & Tools ======//
         function addCopyButtons() {
@@ -190,32 +260,30 @@
             feather.replace();
         }
     
-        function initMonacoEditor() {
-            if (editorInitialized || typeof monaco === 'undefined') return;
-            
-            require.config({ 
-                paths: { vs: 'https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.36.1/min/vs' },
-                waitSeconds: 30
-            });
-            
-            require(['vs/editor/editor.main'], () => {
-                window.editor = monaco.editor.create(document.getElementById('monacoEditor'), {
-                    value: '// Start coding here...\n',
-                    language: 'python',
-                    theme: 'vs-dark',
-                    minimap: { enabled: false },
-                    automaticLayout: true
-                });
-                editorInitialized = true;
-            });
-        }
-    
-        //====== Theme Toggle ======//
-        document.getElementById('themeToggle').addEventListener('click', function() {
-            const isDark = document.body.classList.toggle('dark-mode');
-            document.querySelector('.container').classList.toggle('dark');
-            this.textContent = isDark ? '☀️' : '🌙';
-        });
+        // Your existing initialization code for Monaco Editor
+      function initMonacoEditor() {
+          if (editorInitialized || typeof monaco === 'undefined') return;
+          
+          require.config({ 
+              paths: { vs: 'https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.36.1/min/vs' },
+              waitSeconds: 30
+          });
+          
+          require(['vs/editor/editor.main'], () => {
+              window.editor = monaco.editor.create(document.getElementById('monacoEditor'), {
+                  value: '// Start coding here...\n',
+                  language: 'python',
+                  theme: 'vs-dark',
+                  minimap: { enabled: false },
+                  automaticLayout: true
+              });
+              editorInitialized = true;
+          });
+      }
+      
+      // Call the initialization function after DOM is ready
+      document.addEventListener('DOMContentLoaded', initMonacoEditor);
     </script>
 </body>
+
 </html>
